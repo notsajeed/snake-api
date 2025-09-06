@@ -11,14 +11,14 @@ CELL_SIZE = 20
 BOARD_WIDTH = 20
 BOARD_HEIGHT = 15
 COLORS = {
-    'bg': '#0d1117',   
-    'snake': '#238636',    
-    'head': '#2ea043',   
-    'food': '#da3633',    
-    'grid': '#21262d'      
+    'bg': '#0d1117',      # GitHub dark theme
+    'snake': '#238636',    # GitHub green
+    'head': '#2ea043',     # Lighter green for head
+    'food': '#da3633',     # GitHub red
+    'grid': '#21262d'      # Subtle grid lines
 }
 
-
+# In-memory game state (use Redis/DB for production)
 game_state = None
 
 def get_initial_state():
@@ -47,7 +47,8 @@ def move_snake(state, direction):
     
     snake = state['snake'][:]
     head = snake[0][:]
-
+    
+    # Update direction (prevent reverse)
     valid_moves = {
         'up': state['dir'] != 'down',
         'down': state['dir'] != 'up', 
@@ -58,6 +59,7 @@ def move_snake(state, direction):
     if direction in valid_moves and valid_moves[direction]:
         state['dir'] = direction
     
+    # Move head
     if state['dir'] == 'up':
         head[1] -= 1
     elif state['dir'] == 'down':
@@ -67,15 +69,17 @@ def move_snake(state, direction):
     elif state['dir'] == 'right':
         head[0] += 1
     
+    # Check collisions
     if (head[0] < 0 or head[0] >= BOARD_WIDTH or 
         head[1] < 0 or head[1] >= BOARD_HEIGHT or
         head in snake):
         state['game_over'] = True
         return state
     
+    # Add new head
     snake.insert(0, head)
     
-
+    # Check food
     if head == state['food']:
         state['score'] += 10
         state['food'] = generate_food(snake, BOARD_WIDTH, BOARD_HEIGHT)
@@ -94,18 +98,21 @@ def render_svg(state):
     svg = f'''<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="{width}" height="{height}" fill="{COLORS['bg']}"/>
 '''
-  
+    
+    # Grid
     for x in range(0, width + 1, CELL_SIZE):
         svg += f'    <line x1="{x}" y1="0" x2="{x}" y2="{height}" stroke="{COLORS['grid']}" stroke-width="1" opacity="0.1"/>\n'
     for y in range(0, height + 1, CELL_SIZE):
         svg += f'    <line x1="0" y1="{y}" x2="{width}" y2="{y}" stroke="{COLORS['grid']}" stroke-width="1" opacity="0.1"/>\n'
-
+    
+    # Food
     fx, fy = state['food']
     food_x = fx * CELL_SIZE + 2
     food_y = fy * CELL_SIZE + 2
     food_size = CELL_SIZE - 4
     svg += f'    <rect x="{food_x}" y="{food_y}" width="{food_size}" height="{food_size}" fill="{COLORS['food']}" rx="3"/>\n'
-
+    
+    # Snake
     for i, (sx, sy) in enumerate(state['snake']):
         snake_x = sx * CELL_SIZE + 1
         snake_y = sy * CELL_SIZE + 1
@@ -115,6 +122,7 @@ def render_svg(state):
         
         svg += f'    <rect x="{snake_x}" y="{snake_y}" width="{snake_size}" height="{snake_size}" fill="{color}" opacity="{opacity}" rx="2"/>\n'
     
+    # Game over overlay
     if state.get('game_over'):
         svg += f'''    <rect x="0" y="0" width="{width}" height="{height}" fill="black" opacity="0.7"/>
     <text x="{width//2}" y="{height//2 - 20}" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold">GAME OVER</text>
@@ -122,6 +130,7 @@ def render_svg(state):
     <text x="{width//2}" y="{height//2 + 35}" text-anchor="middle" fill="{COLORS['snake']}" font-family="Arial, sans-serif" font-size="12">Click any direction to restart</text>
 '''
     else:
+        # Score
         svg += f'    <text x="10" y="{height - 10}" fill="{COLORS['snake']}" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Score: {state["score"]}</text>\n'
     
     svg += '</svg>'
@@ -144,15 +153,18 @@ def move_game(direction):
     
     if game_state is None:
         game_state = get_initial_state()
-
+    
+    # Reset if game over
     if game_state.get('game_over'):
         game_state = get_initial_state()
         game_state['dir'] = direction
         game_state['food'] = generate_food(game_state['snake'], BOARD_WIDTH, BOARD_HEIGHT)
-
+    
+    # Validate direction
     if direction not in ['up', 'down', 'left', 'right']:
         return jsonify({'error': 'Invalid direction'}), 400
-
+    
+    # Move snake
     game_state = move_snake(game_state, direction)
     
     return jsonify({
@@ -183,6 +195,12 @@ def reset_game():
     global game_state
     game_state = get_initial_state()
     game_state['food'] = generate_food(game_state['snake'], BOARD_WIDTH, BOARD_HEIGHT)
+    
+    # Check for redirect parameter
+    redirect_url = request.args.get('redirect')
+    if redirect_url:
+        from flask import redirect
+        return redirect(redirect_url)
     
     return jsonify({'success': True, 'message': 'Game reset'})
 
