@@ -17,8 +17,10 @@ COLORS = {
     'grid': '#21262d'      # Subtle grid lines
 }
 
-# In-memory game state
 game_state = None
+
+RANDOM_SUFFIX = str(random.randint(1000, 9999))
+BOARD_ROUTE = f"/board_{RANDOM_SUFFIX}.svg"
 
 def get_initial_state():
     return {
@@ -47,7 +49,7 @@ def move_snake(state, direction):
 
     valid_moves = {
         'up': state['dir'] != 'down',
-        'down': state['dir'] != 'up',
+        'down': state['dir'] != 'up', 
         'left': state['dir'] != 'right',
         'right': state['dir'] != 'left'
     }
@@ -116,8 +118,8 @@ def render_svg(state):
     svg += '</svg>'
     return svg
 
-@app.route('/game.svg')
-def get_game_svg():
+@app.route(BOARD_ROUTE)  
+def get_board_svg():
     global game_state
     if game_state is None:
         game_state = get_initial_state()
@@ -141,7 +143,7 @@ def move_game(direction):
 
     redirect_url = request.args.get('redirect')
     if redirect_url:
-        return redirect(f"{redirect_url}?t={int(datetime.now().timestamp())}", code=303)
+        return redirect(redirect_url, code=303)
 
     return jsonify({
         'success': True,
@@ -171,16 +173,16 @@ def reset_game():
 
     redirect_url = request.args.get('redirect')
     if redirect_url:
-        return redirect(f"{redirect_url}?t={int(datetime.now().timestamp())}", code=303)
+        return redirect(redirect_url, code=303)
 
     return jsonify({'success': True, 'message': 'Game reset'})
 
 @app.route('/')
 def home():
-    return '''
+    return f'''
     <h1>🐍 Snake Game API</h1>
     <ul>
-        <li><code>/game.svg</code> - Game board</li>
+        <li><code>{BOARD_ROUTE}</code> - Game board</li>
         <li><code>/move/&lt;dir&gt;</code> - Move snake (up, down, left, right)</li>
         <li><code>/status</code> - Game status</li>
         <li><code>/reset</code> - Reset game</li>
