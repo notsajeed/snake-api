@@ -47,7 +47,7 @@ def move_snake(state, direction):
 
     valid_moves = {
         'up': state['dir'] != 'down',
-        'down': state['dir'] != 'up', 
+        'down': state['dir'] != 'up',
         'left': state['dir'] != 'right',
         'right': state['dir'] != 'left'
     }
@@ -141,7 +141,7 @@ def move_game(direction):
 
     redirect_url = request.args.get('redirect')
     if redirect_url:
-        return redirect(redirect_url, code=303)
+        return redirect(f"{redirect_url}?t={int(datetime.now().timestamp())}", code=303)
 
     return jsonify({
         'success': True,
@@ -171,7 +171,7 @@ def reset_game():
 
     redirect_url = request.args.get('redirect')
     if redirect_url:
-        return redirect(redirect_url, code=303)
+        return redirect(f"{redirect_url}?t={int(datetime.now().timestamp())}", code=303)
 
     return jsonify({'success': True, 'message': 'Game reset'})
 
